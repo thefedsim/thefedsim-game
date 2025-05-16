@@ -1,12 +1,11 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import * as React from 'react'
-import { ReactNode } from 'react'
-import { getExplorerLink, GetExplorerLinkArgs } from 'gill'
+import * as web3 from '@solana/web3.js'
+import { ReactNode, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { AppAlert } from '@/components/app-alert'
-import { useWalletUi, useWalletUiCluster } from '@wallet-ui/react'
+import { getExplorerLink, GetExplorerLinkArgs } from 'gill'
 
 export function ExplorerLink({
   className,
@@ -29,17 +28,20 @@ export function ExplorerLink({
 }
 
 export function ClusterChecker({ children }: { children: ReactNode }) {
-  const { client } = useWalletUi()
-  const { cluster } = useWalletUiCluster()
+  // Hardcoded to devnet for now — adjust if needed
+  const connection = useMemo(
+    () => new web3.Connection(web3.clusterApiUrl('devnet'), 'confirmed'),
+    []
+  )
 
   const query = useQuery({
-    queryKey: ['version', { cluster, endpoint: cluster.urlOrMoniker }],
-    queryFn: () => client.rpc.getVersion(),
+    queryKey: ['version'],
+    queryFn: () => connection.getVersion(),
     retry: 1,
   })
-  if (query.isLoading) {
-    return null
-  }
+
+  if (query.isLoading) return null
+
   if (query.isError || !query.data) {
     return (
       <AppAlert
@@ -49,9 +51,10 @@ export function ClusterChecker({ children }: { children: ReactNode }) {
           </Button>
         }
       >
-        Error connecting to cluster <span className="font-bold">{cluster.label}</span>.
+        Error connecting to <span className="font-bold">Solana Devnet</span>.
       </AppAlert>
     )
   }
-  return children
+
+  return <>{children}</>
 }

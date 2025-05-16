@@ -1,39 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [
-`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fed Simulator
+
+Fed Simulator is a macroeconomic simulation game where you play as the Federal Reserve. Your goal is to manage interest rates, deploy monetary policy tools (QE, QT), and maintain economic stability while reacting to live market conditions. Successful players are rewarded with the $FED token on Solana.
+
+![Fed Simulator gameplay](./public/screenshot.png)
+
+## Features
+
+- Simulates key macroeconomic indicators: inflation, unemployment, GDP growth, interest rates, and trust
+- Allows user decisions: raise/cut interest rates, quantitative easing (QE), and quantitative tightening (QT)
+- Displays real-time chart and ticker reactions
+- Integrates Solana wallet login and token claiming
+- Rewards users with $FED tokens based on gameplay performance
+
+
+## Tech Stack
+
+- Next.js (App Router)
+- React with Tailwind CSS
+- lightweight-charts for dynamic charting
+- Solana: `@solana/web3.js`, SPL Token, Wallet Adapter
+- Hosted on Vercel or custom deployment
+
+
+## Solana Integration
+
+- Uses the existing $FED token  
+  Mint: `5s4gk4Y4PC9FdRz1y54hs4Qod5J8mSbHoW2FmrVapump`
+- Token claim flow built with `getOrCreateAssociatedTokenAccount` and `transfer`
+- Tokens are transferred from a treasury wallet to users who connect and complete the game
+
+
+## Roadmap
+
+- Define win/loss conditions
+- Improve reward logic and token distribution
+- Add leaderboards and performance metrics
+- Improve mobile responsiveness and UX polish
+  
+
+## Contributing
+
+Contributions are welcome. Please fork the repo, submit PRs, or suggest improvements related to game logic, Solana integration, or UI/UX.
+
 
 ## Getting Started
 
-First, run the development server:
+1. Install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn
+   # or
+   pnpm install
+   # or
+   bun install
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+2. Run the development server:
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   # or
+   pnpm dev
+   # or
+   bun dev
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-## Learn More
+Developed for the Solana Hackathon.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions
-are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use
-the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme)
-from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for
-more details.
