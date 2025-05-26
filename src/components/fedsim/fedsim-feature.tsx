@@ -3,11 +3,12 @@
 'use client'
 
 import { FedAction, EconomicState } from './fedsim-engine'
-import { Button } from '@/components/ui/button'
 import { FedSimChart } from './fedsim-chart'
-import { motion, AnimatePresence } from 'framer-motion'
-import { useEffect, useState } from 'react'
-
+import { useEffect, useState, useRef } from 'react'
+import { ClaimFedButton } from './fedsim-claim-fed'
+import { FedToolButton } from './FedToolButton'
+import { Toaster } from 'react-hot-toast'
+import { toast } from 'react-hot-toast'
 export function FedSimFeature({
   state,
   simulateTurn,
@@ -17,9 +18,16 @@ export function FedSimFeature({
 }) {
   const [floatingAction, setFloatingAction] = useState<null | FedAction>(null)
 
+  const prevObjective = useRef(state.currentObjective);
+
   const handleAction = (action: FedAction) => {
-    simulateTurn(action)
-    setFloatingAction(action)
+    // Find the current objective
+    const currentObj = state.objectives.find((o) => o.id === state.currentObjective);
+    if (currentObj && currentObj.requiredTool !== action) {
+      toast.error('⚠️ That tool didn\'t help solve this objective');
+    }
+    simulateTurn(action);
+    setFloatingAction(action);
   }
 
   useEffect(() => {
@@ -28,91 +36,89 @@ export function FedSimFeature({
     return () => clearTimeout(timeout)
   }, [floatingAction])
 
+  useEffect(() => {
+    // Objective completed
+    if (
+      prevObjective.current !== state.currentObjective &&
+      prevObjective.current !== null
+    ) {
+      toast.success('✅ Objective Complete! +5 $FED');
+      // If all objectives are done
+      if (state.currentObjective === null && state.status === 'won') {
+        toast.success('🎉 You completed all objectives!');
+      }
+    }
+    prevObjective.current = state.currentObjective;
+  }, [state.currentObjective, state.status]);
+
   return (
-    <div className="space-y-4 relative">
-      <div className="flex justify-center gap-4 bg-neutral-900 py-3 sticky top-0 z-20 border-b border-neutral-800">
-        {(['raise', 'cut', 'qe', 'qt'] as FedAction[]).map((action) => (
-          <div className="relative" key={action}>
-            <Button
-              variant={
-                action === 'raise'
-                  ? 'destructive'
-                  : action === 'cut'
-                  ? 'secondary'
-                  : action === 'qe'
-                  ? 'outline'
-                  : 'secondary'
-              }
-              className={
-                action === 'cut'
-                  ? 'text-green-400 border-green-400'
-                  : action === 'qe'
-                  ? 'text-blue-400 border-blue-400'
-                  : ''
-              }
-              onClick={() => handleAction(action)}
-              disabled={state.status !== 'playing'}
-            >
-              {action.toUpperCase()}
-            </Button>
-            <AnimatePresence>
-              {floatingAction === action && (
-                <motion.div
-                  initial={{ opacity: 1, y: 0 }}
-                  animate={{ opacity: 0, y: -30 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 1 }}
-                  className="absolute left-1/2 -translate-x-1/2 text-green-400 text-sm font-bold"
-                >
-                  +1 $FED
-                </motion.div>
-              )}
-            </AnimatePresence>
+    <>
+      <Toaster position="top-right" />
+      <div className="grid grid-cols-1 lg:grid-cols-12 min-h-screen bg-[#0c0c0f] text-white font-sans">
+        {/* Left: Chart */}
+        <section className="lg:col-span-8 border-r border-zinc-800 p-4">
+          <div className="bg-[#121212] rounded-lg border border-zinc-800 h-[300px] overflow-hidden">
+            <FedSimChart data={state.candles} />
           </div>
-        ))}
-      </div>
+        </section>
 
-      {/* Show current objective above the chart */}
-      {state.currentObjective && (
-        <div className="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-100 p-3 rounded-md text-sm font-medium shadow-inner mb-2 text-center">
-          <span className="font-semibold">Objective {state.currentObjective}:</span>{' '}
-          {
-            state.objectives.find((o) => o.id === state.currentObjective)?.situation
-          }
-        </div>
-      )}
+        {/* Right: HUD + Tools + Objectives */}
+        <aside className="lg:col-span-4 p-4 space-y-6 bg-[#0f0f12]">
+          {/* Metrics HUD */}
+          <div className="bg-[#1b1b20] rounded-lg border border-zinc-700 p-4 text-sm font-mono space-y-2">
+            <div>🧠 Trust: {state.trust.toFixed(0)}</div>
+            <div>📊 Inflation: {state.inflation.toFixed(1)}%</div>
+            <div>📉 Unemployment: {state.unemployment.toFixed(1)}%</div>
+            <div>🏦 Rate: {state.interestRate.toFixed(2)}%</div>
+            <div>💰 Earned: {state.earnedFed} $FED</div>
+          </div>
 
-      {/* 📉 Chart */}
-      <FedSimChart data={state.candles} />
-
-      {/* 📊 Stats + Earned */}
-      <div className="flex justify-center gap-6 text-sm text-muted-foreground px-4">
-        <span>Inflation: {state.inflation.toFixed(1)}%</span>
-        <span>Unemployment: {state.unemployment.toFixed(1)}%</span>
-        <span>Rate: {state.interestRate.toFixed(2)}%</span>
-        <span>GDP: {state.gdpGrowth.toFixed(2)}%</span>
-        <span>Trust: {state.trust.toFixed(0)}</span>
-        <span className="text-xs text-gray-500">Turn {state.turn}</span>
-        <span className="text-green-400 font-mono">Earned: {state.earnedFed} $FED</span>
-      </div>
-
-      {state.status !== 'playing' && (
-        <div className="text-center mt-6 space-y-2">
-          {state.status === 'won' ? (
-            <p className="text-green-400 text-xl font-bold">
-              🎉 Victory! You stabilized the economy.
-            </p>
-          ) : (
-            <p className="text-red-400 text-xl font-bold">
-              💥 Game Over: The economy collapsed.
-            </p>
+          {/* Objective Box */}
+          {state.currentObjective && (
+            <div className="bg-[#18181b] border border-yellow-500 p-4 rounded text-sm font-mono space-y-2">
+              <p className="text-yellow-400 font-semibold">🎯 Objective</p>
+              <p>{state.objectives.find(o => o.id === state.currentObjective)?.situation}</p>
+              <p className="text-yellow-200 italic">
+                Solve this using a policy tool effectively.
+              </p>
+            </div>
           )}
-          <p className="text-muted-foreground">Claim your rewards below.</p>
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            Restart Simulation
-          </Button>
-        </div>
-      )}
-    </div>
+
+          {/* Tools */}
+          <div className="space-y-2">
+            <h2 className="text-xs text-gray-400 uppercase tracking-wide">Policy Tools</h2>
+            <FedToolButton
+              label="Raise"
+              tooltip="Raise interest rates to fight inflation"
+              color="bg-red-600 hover:bg-red-700"
+              onClick={() => handleAction('raise')}
+            />
+            <FedToolButton
+              label="Cut"
+              tooltip="Cut interest rates to stimulate the economy"
+              color="bg-green-600 hover:bg-green-700"
+              onClick={() => handleAction('cut')}
+            />
+            <FedToolButton
+              label="QE"
+              tooltip="Inject liquidity to restore confidence"
+              color="bg-blue-600 hover:bg-blue-700"
+              onClick={() => handleAction('qe')}
+            />
+            <FedToolButton
+              label="QT"
+              tooltip="Withdraw liquidity to cool inflation"
+              color="bg-yellow-600 hover:bg-yellow-700"
+              onClick={() => handleAction('qt')}
+            />
+          </div>
+
+          {/* Claim Button */}
+          <div className="pt-2 flex justify-end">
+            <ClaimFedButton amount={state.earnedFed} />
+          </div>
+        </aside>
+      </div>
+    </>
   )
 }

@@ -1,3 +1,5 @@
+//src/app/api/claim/route.ts
+
 import { NextResponse } from 'next/server'
 import { PublicKey } from '@solana/web3.js'
 import { claimTokens } from '@/lib/solana/claim'

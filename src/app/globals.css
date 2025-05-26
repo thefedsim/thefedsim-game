@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
@@ -117,6 +118,9 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Space Mono', monospace;
+    background-color: #0a0a0a;
+    color: white;
   }
 }
 

@@ -1,3 +1,5 @@
+//src/lib/solana/claim.ts
+
 import { Connection, PublicKey, Keypair } from '@solana/web3.js'
 import { getOrCreateAssociatedTokenAccount, transfer } from '@solana/spl-token'
 import bs58 from 'bs58'
