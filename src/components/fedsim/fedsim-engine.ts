@@ -31,6 +31,18 @@ export type EconomicState = {
   }[]
   objectives: Objective[]
   currentObjective: number | null
+  customOps: CustomOperation[],
+  yieldCurve: {
+    shortRate: number
+    longRate: number
+  }[]
+}
+
+export type CustomOperation = {
+  turn: number
+  type: 'repo' | 'reverse-repo'
+  counterparty: string
+  amount: number
 }
 
 const initialState: EconomicState = {
@@ -47,6 +59,8 @@ const initialState: EconomicState = {
   history: [],
   objectives: defaultObjectives,
   currentObjective: 1,
+  customOps: [],
+  yieldCurve: [],
 }
 
 export function useGameEngine() {
@@ -77,38 +91,45 @@ export function useGameEngine() {
       let trust = prev.trust
       let gdpGrowth = prev.gdpGrowth
 
-      // Policy effect
+      // Trust effects
+      const trustMultiplier = 1 + (trust - 50) / 100
+
+      // Interest rate → investment channel
+      const investment = Math.max(0, 100 - interestRate * 10) * trustMultiplier
+
+      // GDP = investment-driven
+      gdpGrowth = (investment / 100) * 2 - 0.5 + (Math.random() - 0.5)
+
+      // Policy effects
       switch (action) {
         case 'raise':
           interestRate += 0.25
-          inflation -= 0.3
-          unemployment += 0.2
           trust -= 1
           break
         case 'cut':
           interestRate -= 0.25
-          inflation += 0.3
-          unemployment -= 0.1
           trust += 1
           break
         case 'qe':
-          gdpGrowth += 0.25
-          inflation += 0.2
           trust += 2
           break
         case 'qt':
-          gdpGrowth -= 0.25
-          inflation -= 0.2
           trust -= 2
           break
       }
+
+      // Inflation tied to growth, rates
+      inflation += gdpGrowth * 0.2 - interestRate * 0.05
+
+      // Unemployment reacts to growth + rates
+      unemployment += -gdpGrowth * 0.4 + interestRate * 0.2
 
       // Clamp values
       inflation = clamp(inflation, 0, 10)
       unemployment = clamp(unemployment, 0, 20)
       trust = clamp(trust, 0, 100)
-      gdpGrowth = clamp(gdpGrowth, -10, 10)
       interestRate = clamp(interestRate, 0, 10)
+      gdpGrowth = clamp(gdpGrowth, -10, 10)
 
       // Candlestick
       const last = prev.candles.at(-1)!
@@ -131,13 +152,19 @@ export function useGameEngine() {
       if (inflation > 9 || gdpGrowth < -2.5 || trust < 30) {
         status = 'lost'
       } else if (turn >= 10) {
-        const won =
-          inflation <= 2.5 &&
-          unemployment <= 5 &&
-          gdpGrowth >= 1 &&
-          trust >= 60
+        const won = inflation <= 2.5 && unemployment <= 5 && gdpGrowth >= 1 && trust >= 60
         status = won ? 'won' : 'lost'
       }
+
+      // Yield curve logic
+      const longRateBase = interestRate + 0.5 + (Math.random() - 0.5) * 0.3
+      const macroAdjustment = gdpGrowth * 0.1 - inflation * 0.05 + trust * 0.01
+      const longRate = clamp(longRateBase + macroAdjustment, 0, 10)
+
+      const updatedYieldCurve = [...prev.yieldCurve, {
+        shortRate: interestRate,
+        longRate,
+      }]
 
       // Build next state
       const next = {
@@ -165,13 +192,14 @@ export function useGameEngine() {
             earnedFed,
           },
         ],
+        yieldCurve: updatedYieldCurve,
       }
 
       const updatedObjectives = [...next.objectives]
-      const current = updatedObjectives.find(o => o.id === next.currentObjective)
+      const current = updatedObjectives.find((o) => o.id === next.currentObjective)
       if (current && action === current.requiredTool && current.status === 'unlocked') {
         current.status = 'completed'
-        const nextObjective = updatedObjectives.find(o => o.id === current.id + 1)
+        const nextObjective = updatedObjectives.find((o) => o.id === current.id + 1)
         if (nextObjective) {
           nextObjective.status = 'unlocked'
           next.currentObjective = nextObjective.id
@@ -185,7 +213,37 @@ export function useGameEngine() {
     })
   }
 
-  return { state, simulateTurn }
+  const executeCustomOp = (type: 'repo' | 'reverse-repo', counterparty: string, amount: number) => {
+    setState((prev) => {
+      const op: CustomOperation = {
+        turn: prev.turn + 1,
+        type,
+        counterparty,
+        amount,
+      }
+
+      return {
+        ...prev,
+        customOps: [...prev.customOps, op],
+      }
+    })
+  }
+
+  const loadScenario = (params: Partial<EconomicState>) => {
+    setState((prev) => ({
+      ...prev,
+      ...params,
+      turn: 0,
+      earnedFed: 0,
+      status: 'playing',
+      candles: [],
+      history: [],
+      customOps: [],
+      currentObjective: params.objectives?.[0]?.id ?? null,
+    }))
+  }
+
+  return { state, simulateTurn, executeCustomOp, loadScenario }
 }
 
 function clamp(value: number, min: number, max: number): number {

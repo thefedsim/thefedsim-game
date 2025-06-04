@@ -16,7 +16,7 @@ export function FedSimChart({ data }: { data: CandlestickData[] }) {
 
   useEffect(() => {
     if (!containerRef.current) return
-
+  
     const chart = createChart(containerRef.current, {
       width: containerRef.current.offsetWidth,
       height: 300,
@@ -33,7 +33,7 @@ export function FedSimChart({ data }: { data: CandlestickData[] }) {
         secondsVisible: true,
       },
     })
-
+  
     chart.priceScale('right').applyOptions({
       autoScale: true,
       scaleMargins: {
@@ -41,24 +41,34 @@ export function FedSimChart({ data }: { data: CandlestickData[] }) {
         bottom: 0.1,
       },
     })
-
+  
     chartRef.current = chart
     seriesRef.current = chart.addSeries(CandlestickSeries, {
       title: 'BTC/USD',
       priceFormat: {
         type: 'custom',
-        formatter: (price: number) => price.toLocaleString('en-US', { maximumFractionDigits: 0 }),
+        formatter: (price: number) =>
+          price.toLocaleString('en-US', { maximumFractionDigits: 0 }),
       },
     })
-    
+  
     seriesRef.current.setData(data)
     chart.timeScale().fitContent()
-
+  
+    const handleResize = () => {
+      if (containerRef.current) {
+        chart.resize(containerRef.current.offsetWidth, 300)
+      }
+    }
+  
+    window.addEventListener('resize', handleResize)
+  
     return () => {
+      window.removeEventListener('resize', handleResize)
       chart.remove()
     }
   }, [])
-
+  
   useEffect(() => {
     if (seriesRef.current && data.length > 0) {
       seriesRef.current.setData(data)

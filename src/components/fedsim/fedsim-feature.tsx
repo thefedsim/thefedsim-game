@@ -2,20 +2,30 @@
 
 'use client'
 
-import { FedAction, EconomicState } from './fedsim-engine'
+import { FedAction } from './fedsim-engine'
 import { FedSimChart } from './fedsim-chart'
 import { useEffect, useState, useRef } from 'react'
 import { ClaimFedButton } from './fedsim-claim-fed'
 import { FedToolButton } from './FedToolButton'
 import { Toaster } from 'react-hot-toast'
 import { toast } from 'react-hot-toast'
-export function FedSimFeature({
-  state,
-  simulateTurn,
-}: {
-  state: EconomicState
-  simulateTurn: (action: FedAction) => void
-}) {
+import { FedOrderBook } from './fed-order-book'
+import { FedTradeHistory } from './fed-trade-history'
+import { FedBalanceSheet } from './fed-balance-sheet' 
+import { FedBalanceChart } from './fed-balance-chart'
+import { FedOperationsPanel } from './fed-operations-panel' 
+import { useGameEngine } from './fedsim-engine'
+import { FedLiquidityOpsLog } from './fed-liquidity-ops-log'
+import { FedScenarioBuilder } from './fed-scenario-builder'
+import { FedTerminal } from './fed-terminal'
+import { MacroMetricsChart } from './fed-macro-metrics-chart'
+import { YieldCurveChart } from './yield-curve-chart'
+
+
+
+
+export function FedSimFeature() {
+  const { state, simulateTurn, executeCustomOp, loadScenario } = useGameEngine()
   const [floatingAction, setFloatingAction] = useState<null | FedAction>(null)
 
   const prevObjective = useRef(state.currentObjective);
@@ -42,7 +52,7 @@ export function FedSimFeature({
       prevObjective.current !== state.currentObjective &&
       prevObjective.current !== null
     ) {
-      toast.success('✅ Objective Complete! +5 $FED');
+      toast.success('✅ Objective Complete! +1 $FED');
       // If all objectives are done
       if (state.currentObjective === null && state.status === 'won') {
         toast.success('🎉 You completed all objectives!');
@@ -56,10 +66,14 @@ export function FedSimFeature({
       <Toaster position="top-right" />
       <div className="grid grid-cols-1 lg:grid-cols-12 min-h-screen bg-[#0c0c0f] text-white font-sans">
         {/* Left: Chart */}
-        <section className="lg:col-span-8 border-r border-zinc-800 p-4">
+        <section className="lg:col-span-8 border-r border-zinc-800 p-4 space-y-6">
           <div className="bg-[#121212] rounded-lg border border-zinc-800 h-[300px] overflow-hidden">
             <FedSimChart data={state.candles} />
           </div>
+
+          <FedTerminal state={state} />
+          <MacroMetricsChart state={state} /> 
+          <YieldCurveChart state={state} />
         </section>
 
         {/* Right: HUD + Tools + Objectives */}
@@ -112,6 +126,19 @@ export function FedSimFeature({
               onClick={() => handleAction('qt')}
             />
           </div>
+
+          <FedScenarioBuilder onLaunch={loadScenario} /> 
+
+          {/* Order Book */}
+          <FedOrderBook state={state} />
+
+          <FedBalanceSheet state={state} />
+          <FedBalanceChart state={state} />
+          <FedOperationsPanel onExecute={executeCustomOp} />
+          <FedLiquidityOpsLog state={state} />
+
+          {/* Trade History */}
+          <FedTradeHistory state={state} />
 
           {/* Claim Button */}
           <div className="pt-2 flex justify-end">
