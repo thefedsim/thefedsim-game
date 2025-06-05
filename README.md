@@ -30,12 +30,17 @@ Fed Simulator is a macroeconomic simulation game where you play as the Federal R
 - Tokens are transferred from a treasury wallet to users who connect and complete the game
 
 
-## Roadmap
+## Ultimate goal: Make a tool so realistic that even Jerome Powell would use it. 
 
-- Define win/loss conditions
-- Improve reward logic and token distribution
-- Add leaderboards and performance metrics
-- Improve mobile responsiveness and UX polish
+Other potential use-cases:
+
+- Open-source policy lab for macro students
+
+- Training platform for central banking courses
+
+- Interactive visualization layer for real-world economic data
+
+- Realistic decision simulator with AI “FOMC members” trained on real speeches
   
 
 ## Contributing
