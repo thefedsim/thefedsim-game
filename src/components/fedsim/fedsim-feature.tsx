@@ -11,33 +11,49 @@ import { Toaster } from 'react-hot-toast'
 import { toast } from 'react-hot-toast'
 import { FedOrderBook } from './fed-order-book'
 import { FedTradeHistory } from './fed-trade-history'
-import { FedBalanceSheet } from './fed-balance-sheet' 
+import { FedBalanceSheet } from './fed-balance-sheet'
 import { FedBalanceChart } from './fed-balance-chart'
-import { FedOperationsPanel } from './fed-operations-panel' 
+import { FedOperationsPanel } from './fed-operations-panel'
 import { useGameEngine } from './fedsim-engine'
 import { FedLiquidityOpsLog } from './fed-liquidity-ops-log'
 import { FedScenarioBuilder } from './fed-scenario-builder'
 import { FedTerminal } from './fed-terminal'
 import { MacroMetricsChart } from './fed-macro-metrics-chart'
 import { YieldCurveChart } from './yield-curve-chart'
-
-
-
+import { ShockManager } from './shock-manager'
+import { defaultCommittee, voteOnPolicy, FedVote } from './fomc-model'
+import { FomcVotePanel } from './fomc-vote-panel'
+import { SepDotPlot } from './sep-dot-plot'
 
 export function FedSimFeature() {
-  const { state, simulateTurn, executeCustomOp, loadScenario } = useGameEngine()
-  const [floatingAction, setFloatingAction] = useState<null | FedAction>(null)
+  const { state, simulateTurn, executeCustomOp, loadScenario, applyShock } = useGameEngine()
+  const [floatingAction, setFloatingAction] = useState<FedAction | null>(null)
+  const committee = defaultCommittee()
+  const votes: Record<string, FedVote> = Object.fromEntries(committee.map((member) => [member.id, member.vote(state)]))
+  const votedAction = voteOnPolicy(state, committee)
 
-  const prevObjective = useRef(state.currentObjective);
+  const prevObjective = useRef(state.currentObjective)
 
   const handleAction = (action: FedAction) => {
-    // Find the current objective
-    const currentObj = state.objectives.find((o) => o.id === state.currentObjective);
+    const currentObj = state.objectives.find((o) => o.id === state.currentObjective)
+
     if (currentObj && currentObj.requiredTool !== action) {
-      toast.error('⚠️ That tool didn\'t help solve this objective');
+      toast.error("⚠️ That tool didn't help solve this objective")
+      return
     }
-    simulateTurn(action);
-    setFloatingAction(action);
+
+    const votedAction = voteOnPolicy(state, committee)
+
+    if (votedAction === 'hold') {
+      toast('🧘 FOMC held rates steady — you overrode it')
+    } else if (votedAction !== action) {
+      toast(`⚖️ Committee preferred "${votedAction}", but you chose "${action}"`)
+    } else {
+      toast.success('🗳️ You executed the committee\'s preferred action')
+    }
+
+    simulateTurn(action)
+    setFloatingAction(action)
   }
 
   useEffect(() => {
@@ -48,18 +64,15 @@ export function FedSimFeature() {
 
   useEffect(() => {
     // Objective completed
-    if (
-      prevObjective.current !== state.currentObjective &&
-      prevObjective.current !== null
-    ) {
-      toast.success('✅ Objective Complete! +1 $FED');
+    if (prevObjective.current !== state.currentObjective && prevObjective.current !== null) {
+      toast.success('✅ Objective Complete! +1 $FED')
       // If all objectives are done
       if (state.currentObjective === null && state.status === 'won') {
-        toast.success('🎉 You completed all objectives!');
+        toast.success('🎉 You completed all objectives!')
       }
     }
-    prevObjective.current = state.currentObjective;
-  }, [state.currentObjective, state.status]);
+    prevObjective.current = state.currentObjective
+  }, [state.currentObjective, state.status])
 
   return (
     <>
@@ -72,8 +85,17 @@ export function FedSimFeature() {
           </div>
 
           <FedTerminal state={state} />
-          <MacroMetricsChart state={state} /> 
+          <FomcVotePanel 
+            committee={committee} 
+            votes={votes} 
+            finalDecision={votedAction} 
+            votedAction={votedAction}
+            simulateTurn={simulateTurn}
+          />
+          <SepDotPlot committee={committee} />
+          <MacroMetricsChart state={state} />
           <YieldCurveChart state={state} />
+          <ShockManager onApply={applyShock} />
         </section>
 
         {/* Right: HUD + Tools + Objectives */}
@@ -91,10 +113,8 @@ export function FedSimFeature() {
           {state.currentObjective && (
             <div className="bg-[#18181b] border border-yellow-500 p-4 rounded text-sm font-mono space-y-2">
               <p className="text-yellow-400 font-semibold">🎯 Objective</p>
-              <p>{state.objectives.find(o => o.id === state.currentObjective)?.situation}</p>
-              <p className="text-yellow-200 italic">
-                Solve this using a policy tool effectively.
-              </p>
+              <p>{state.objectives.find((o) => o.id === state.currentObjective)?.situation}</p>
+              <p className="text-yellow-200 italic">Solve this using a policy tool effectively.</p>
             </div>
           )}
 
@@ -127,7 +147,7 @@ export function FedSimFeature() {
             />
           </div>
 
-          <FedScenarioBuilder onLaunch={loadScenario} /> 
+          <FedScenarioBuilder onLaunch={loadScenario} />
 
           {/* Order Book */}
           <FedOrderBook state={state} />
