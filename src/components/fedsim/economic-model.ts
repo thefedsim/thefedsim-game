@@ -165,3 +165,56 @@ export function applyShock(prev: EconomicState, shock: Shock): EconomicState {
     history: [...prev.history, historyEntry],
   }
 }
+
+export function computeBalanceSheet(state: EconomicState): {
+  assets: {
+    treasuries: number
+    repoLoans: number
+  }
+  liabilities: {
+    reserves: number
+    reverseRepos: number
+  }
+} {
+  const assets = {
+    treasuries: 800, // starting baseline
+    repoLoans: 0,
+  }
+  const liabilities = {
+    reserves: 500,
+    reverseRepos: 0,
+  }
+
+  for (const entry of state.history) {
+    switch (entry.action) {
+      case 'qe':
+        assets.treasuries += 50
+        liabilities.reserves += 50
+        break
+      case 'qt':
+        assets.treasuries = Math.max(assets.treasuries - 50, 0)
+        liabilities.reserves = Math.max(liabilities.reserves - 50, 0)
+        break
+      case 'raise':
+        liabilities.reverseRepos += 20
+        liabilities.reserves = Math.max(liabilities.reserves - 20, 0)
+        break
+      case 'cut':
+        liabilities.reserves += 20
+        liabilities.reverseRepos = Math.max(liabilities.reverseRepos - 20, 0)
+        break
+    }
+  }
+
+  for (const op of state.customOps) {
+    if (op.type === 'repo') {
+      assets.repoLoans += op.amount
+      liabilities.reserves += op.amount
+    } else {
+      liabilities.reverseRepos += op.amount
+      liabilities.reserves = Math.max(liabilities.reserves - op.amount, 0)
+    }
+  }
+
+  return { assets, liabilities }
+}

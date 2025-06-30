@@ -39,9 +39,9 @@ export function MacroMetricsChart({ state }: { state: EconomicState }) {
             }}
           />
           <Legend wrapperStyle={{ fontSize: '10px', color: '#aaa' }} />
-          <Line type="monotone" dataKey="inflation" stroke="#f87171" name="Inflation" dot={false} />
-          <Line type="monotone" dataKey="unemployment" stroke="#60a5fa" name="Unemployment" dot={false} />
-          <Line type="monotone" dataKey="trust" stroke="#10b981" name="Trust" dot={false} />
+          <Line type="monotone" dataKey="inflation" stroke="#f87171" name="Inflation" dot={true} />
+          <Line type="monotone" dataKey="unemployment" stroke="#60a5fa" name="Unemployment" dot={true} />
+          <Line type="monotone" dataKey="trust" stroke="#10b981" name="Trust" dot={true} />
         </LineChart>
       </ResponsiveContainer>
     </div>
